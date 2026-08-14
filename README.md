@@ -43,9 +43,15 @@ python3 scripts/usage_report.py --agent zcode|codex
 Add to your agent's `AGENTS.md` so every final reply ends with the line:
 
 > Run `python3 <skill-dir>/scripts/usage_report.py --latest` before every final
-> reply and append its two output lines verbatim:
-> `本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`
-> `整个会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`.
+> reply and append its two output lines verbatim, on separate lines (put them in
+> a fenced code block if the reply is markdown, since a single newline renders
+> as a space):
+>
+> ```text
+> 本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M
+> 整个会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M
+> ```
+>
 > Skip only when the script prints "No usage data found".
 
 ## Supported agents

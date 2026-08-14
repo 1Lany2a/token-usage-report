@@ -39,10 +39,15 @@ Always use the **absolute path** to this skill's directory. Do not `cd` elsewher
 first. The script auto-detects the agent (the one with the newest rollout file);
 `--agent` overrides that.
 
-Append the script's output to the final reply **verbatim** (both lines):
+Append the script's output to the final reply **verbatim** — both lines, on
+separate lines (本段会话 above, 整个会话 below). If the reply is markdown, a
+single newline renders as a space and merges the two lines, so put them inside a
+fenced code block (or leave a blank line between them):
 
+    ```text
     本段会话：输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
     整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
+    ```
 
 - Exit code 0 → **always** include both lines, even if the numbers look
   identical to the previous report (the user wants them every turn).

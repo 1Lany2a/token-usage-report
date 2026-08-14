@@ -1,5 +1,7 @@
 # token-usage-report
 
+[中文版 README](README.zh-CN.md)
+
 An Agent Skill that estimates per-conversation **token usage, cache hit rate,
 and CNY cost** for the agent that installs it:
 

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Report token usage and estimated cost for local agent sessions.
 
-Reads rollout files written by local CLI agents and prints a one-line
-summary of the most recent conversation segment (where detectable) or session:
+Reads rollout files written by local CLI agents and prints the usage of the
+most recent conversation segment together with the whole session:
 
-    输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
+    本段会话：输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
+    整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
 
 Usage:
     python usage_report.py --latest            # most recent segment/session (default)
@@ -350,8 +351,11 @@ def main() -> int:
         return 0
 
     label, full, seg = sessions[-1]
-    agg = full if args.whole else seg
-    print(fmt(agg, show_meta=args.whole))
+    if args.whole:
+        print(f"整个会话：{fmt(full, show_meta=True)}")
+    else:
+        print(f"本段会话：{fmt(seg)}")
+        print(f"整个会话：{fmt(full)}")
     return 0
 
 

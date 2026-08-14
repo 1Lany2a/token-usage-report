@@ -5,10 +5,16 @@ description: "Report per-conversation token usage, cache hit rate, and estimated
 
 # Token Usage Report
 
-Reads the agent's local rollout files and prints a one-line summary of the most
-recent conversation segment's token usage and estimated cost:
+Reads the agent's local rollout files and prints the usage of the most recent
+conversation segment **plus** the whole session (two lines):
 
-    输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
+    本段会话：输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
+    整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
+
+Why both lines? The whole-session numbers are computed locally by the script
+(no extra model calls), so reporting them costs only a few dozen extra
+characters in the reply — negligible token overhead, and the user can compare
+the current turn against the session total.
 
 ## When to run
 
@@ -33,12 +39,13 @@ Always use the **absolute path** to this skill's directory. Do not `cd` elsewher
 first. The script auto-detects the agent (the one with the newest rollout file);
 `--agent` overrides that.
 
-Append the output to the final reply as a single line:
+Append the script's output to the final reply **verbatim** (both lines):
 
     本段会话：输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
+    整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
 
-- Exit code 0 → **always** include the line, even if the numbers look identical
-  to the previous report (the user wants it every turn).
+- Exit code 0 → **always** include both lines, even if the numbers look
+  identical to the previous report (the user wants them every turn).
 - Exit code 1 / "No usage data found" → skip silently; do not ask the user.
 - Any other error → fix the cause (missing Python, moved skill dir) before
   responding; do not silently skip.
@@ -80,7 +87,9 @@ Add this rule to the agent's user-level instruction file (`~/.zcode/AGENTS.md`,
 `~/.codex/AGENTS.md`, `CLAUDE.md`, or a project `AGENTS.md`):
 
 > Run `python3 <skill-dir>/scripts/usage_report.py --latest` before every final
-> reply and append the line as `本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`.
+> reply and append its two output lines verbatim:
+> `本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`
+> `整个会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`.
 > Skip only when the script prints "No usage data found".
 
 ## Security

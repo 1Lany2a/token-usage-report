@@ -6,7 +6,11 @@ agent reports you spent against the provider's real bill.
 
 ```
 本段会话：输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
+整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
 ```
+
+The whole-session line is computed locally by the script — no extra model calls,
+so the added token overhead is just a few dozen characters per reply.
 
 - Zero dependencies — Python 3.9+ standard library only.
 - Works offline, reads local files only, never touches API keys.
@@ -39,8 +43,9 @@ python3 scripts/usage_report.py --agent zcode|codex
 Add to your agent's `AGENTS.md` so every final reply ends with the line:
 
 > Run `python3 <skill-dir>/scripts/usage_report.py --latest` before every final
-> reply and append the line as
-> `本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`.
+> reply and append its two output lines verbatim:
+> `本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`
+> `整个会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`.
 > Skip only when the script prints "No usage data found".
 
 ## Supported agents

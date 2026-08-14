@@ -1,131 +1,90 @@
 ---
 name: token-usage-report
-description: "Report per-conversation token usage, cache hit rate, and estimated CNY cost from local agent rollout files (ZCode, Codex). Use whenever the user asks about token usage, token cost, spending, billing, 用量, 费用, 花费, how many tokens were used, session cost, or wants a usage summary — even if they don't say 'usage report'. Run before composing the final reply so the summary line is appended automatically."
+description: "Estimate per-conversation token usage, cache hit rate and CNY cost from the agent's own local session logs. Use whenever the user asks about token usage, token cost, spending, billing, 用量, 费用, 花费, or wants a usage summary appended to the final reply — run before composing the final reply. The installing agent writes one small adapter that converts its own logs into the record format (see SKILL.md)."
 ---
 
 # Token Usage Report
 
-Reads the agent's local rollout files and prints the usage of the most recent
-conversation segment **plus** the whole session (two lines):
+Estimates the token usage and cost of the most recent conversation turn and the
+whole session, printing two lines:
 
     本段会话：输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
     整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
 
-Why both lines? The whole-session numbers are computed locally by the script
-(no extra model calls), so reporting them costs only a few dozen extra
-characters in the reply — negligible token overhead, and the user can compare
-the current turn against the session total.
+## Install — non-system drive (required)
 
-## When to run
-
-- Run **before composing the final reply** of every session.
-- Trigger phrasings: "token usage", "用量", "费用", "cost", "billing",
-  "多少 tokens", "汇报", "spent".
-- Why: it gives the user a per-turn usage line they can cross-check against the
-  provider's real bill. The cost is an *estimate* (pricing snapshot), not the bill.
-
-## How to run
-
-Script: `scripts/usage_report.py` — Python 3.9+, standard library only
-(no install), except the optional `zstandard` package needed for DeepSeek
-Harness (dsh) logs.
+Install this skill on a **non-system drive** — never into the system drive's
+default skill directories:
 
 ```bash
-python3 <this-skill-dir>/scripts/usage_report.py --latest   # most recent segment/session (default)
-python3 <this-skill-dir>/scripts/usage_report.py --whole    # whole latest session
-python3 <this-skill-dir>/scripts/usage_report.py --all      # per-session list
-python3 <this-skill-dir>/scripts/usage_report.py --agent zcode|codex|claude|opencode|dsh
-python3 <this-skill-dir>/scripts/usage_report.py --session <substring>   # pin a session
+mkdir -p /d/agents/skills          # Windows: D:\agents\skills
+cp -r token-usage-report /d/agents/skills/
 ```
 
-Always use the **absolute path** to this skill's directory. Do not `cd` elsewhere
-first. **Pass `--agent` explicitly when you run it from inside an agent session**
-(auto-detection picks the most recently modified file, which may belong to a
-*different* concurrently running agent); `--session` pins a specific session file.
+Then register that path with your agent (or reference it by absolute path).
+Reason: keeps the system drive clean and avoids permission issues.
 
-Append the script's output to the final reply **verbatim** — both lines, on
-separate lines (本段会话 above, 整个会话 below). If the reply is markdown, a
-single newline renders as a space and merges the two lines, so put them inside a
-fenced code block (or leave a blank line between them):
+## One-time setup: the installing agent writes its adapter
 
-    ```text
-    本段会话：输入 123456 / 缓存命中 98765 / 输出 4321 / 命中率 80.0% / 费用 ¥0.12
-    整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
-    ```
+The core script knows nothing about any agent. **You** (the installing agent)
+write one small adapter, `scripts/adapters/<your-agent>.py`, that reads YOUR
+session logs and prints one JSON object per request line:
 
-- Exit code 0 → **always** include the lines, even if the numbers look
-  identical to the previous report (the user wants them every turn).
-- Codex reports a **single** line (whole session) — there is no segment data.
-- Exit code 1 / "No usage data found" → skip silently; do not ask the user.
-- Any other error → fix the cause (missing Python, moved skill dir) before
-  responding; do not silently skip.
+    {"input": 123456, "cached": 98765, "output": 4321,
+     "started_at": "2026-08-14T10:00:00+08:00", "model": "deepseek-v4-flash",
+     "turn_start": true}
 
-## Supported agents
+- `input` — total input tokens of the request (cache-hit + miss)
+- `cached` — cache-hit input tokens
+- `output` — output tokens (include reasoning tokens if your provider bills them as output)
+- `started_at` — ISO timestamp or null (drives peak/off-peak pricing)
+- `model` — model id or null (default: deepseek-v4-flash)
+- `turn_start` — true on the FIRST request of a new user turn (segment boundary)
 
-| Agent   | Data source                                     | `--latest` means                                   |
-|---------|-------------------------------------------------|----------------------------------------------------|
-| ZCode   | `~/.zcode/cli/rollout/model-io-*.jsonl`         | last **segment**: records since the latest request whose *last* message is a user prompt (that turn incl. its tool calls) |
-| Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole) — Codex rollouts store **cumulative** running totals, so only the final total is reported, as a single line; segment data is unavailable |
-| Claude  | `~/.claude/projects/**/*.jsonl`                 | last **segment**: records since the latest `"type":"user"` record |
-| OpenCode| `<data>/opencode/opencode.db` (SQLite; `%LOCALAPPDATA%` on Windows, `$XDG_DATA_HOME` or `~/.local/share` otherwise) | last **segment** of the most recent session (from the latest user message) |
-| DSH     | `~/.dsh/sessions/**/session.jsonl[.zstd]` (zstd-compressed; needs optional `zstandard`) | last **turn** (one user exchange) + whole session |
+Start from `scripts/adapters/template.py`. Common pitfalls: if your agent's
+records are **cumulative** running totals (e.g. Codex `total_token_usage`),
+emit only the LAST record per session — never sum cumulative values; if your
+logs are compressed (e.g. DSH zstd), decompress first (`pip install zstandard`).
 
-All four are parsed from documented, locally-verified or well-known formats.
-DeepSeek Harness (dsh) and other agents can be added with a small parser —
-see README.md for the recipe.
+## Run — before every final reply
 
-## Accuracy & limitations
+```bash
+python3 <skill-dir>/scripts/usage_report.py <records.jsonl>   # or pipe via stdin
+```
 
-The report is an **estimate from local rollout data + list prices**, not the
-provider bill. Differences vs the official usage page can come from:
+Append both output lines **verbatim** to the final reply. If the reply is
+markdown, put them in a fenced code block so the two lines stay separate.
 
-- **Codex totals are cumulative**: each `total_token_usage` record is the running
-  session total, so the script uses the last record (never sums). Per-request and
-  per-segment numbers are unavailable for Codex.
-- **Peak/off-peak is applied per session start time**, while the provider prices
-  each request by its own time. A session crossing a peak boundary
-  (09:00–12:00 / 14:00–18:00 Beijing) is mispriced for the crossed part.
-- **Reasoning output tokens** are included in `output` for Codex (billed at the
-  output rate); ZCode rollouts expose no reasoning field.
-- Local rollouts may not capture every request on the key (aborted streams,
-  non-interactive calls), so totals can be lower than the full key usage.
-- Rates are a snapshot; a gateway/aggregator key or a different model ID may
-  bill at different prices.
+- Exit 0 → always include the lines, even if the numbers look the same as last time.
+- "No usage data found" → skip silently; do not ask the user.
 
 ## Cost model
 
-DeepSeek official peak/off-peak pricing, effective **2026-08-17 00:00 Beijing
-time** (announced 2026-08-13). Peak hours: 09:00–12:00 and 14:00–18:00 Beijing;
-all other times are off-peak at **half price**. Sessions before 2026-08-17 use
-the flat legacy rates.
+DeepSeek official pricing (CNY / 1M tokens), effective 2026-08-17 00:00 Beijing
+time: peak hours 09:00–12:00 and 14:00–18:00 Beijing = 2× off-peak; sessions
+before 2026-08-17 use flat legacy rates.
 
-| Model            | Period   | cached-in | miss-in | out  | (CNY / 1M tokens) |
-|------------------|----------|-----------|---------|------|--------------------|
-| deepseek-v4-flash| off-peak | 0.05      | 1.5     | 4.5  |                    |
-| deepseek-v4-flash| peak     | 0.10      | 3.0     | 9.0  |                    |
-| deepseek-v4-pro  | off-peak | 0.15      | 4.5     | 13.5 |                    |
-| deepseek-v4-pro  | peak     | 0.30      | 9.0     | 27.0 |                    |
+| Model            | Period   | cached-in | miss-in | out  |
+|------------------|----------|-----------|---------|------|
+| deepseek-v4-flash| off-peak | 0.05      | 1.5     | 4.5  |
+| deepseek-v4-flash| peak     | 0.10      | 3.0     | 9.0  |
+| deepseek-v4-flash| legacy   | 0.02      | 1.0     | 2.0  |
+| deepseek-v4-pro  | off-peak | 0.15      | 4.5     | 13.5 |
+| deepseek-v4-pro  | peak     | 0.30      | 9.0     | 27.0 |
+| deepseek-v4-pro  | legacy   | 0.025     | 3.0     | 6.0  |
 
-The billing period comes from the session start time (machine-local time). If the
-official rates change, update the `PRICES_*` tables in `scripts/usage_report.py`;
-the authoritative source is platform.deepseek.com.
+The billing period is derived from the window's `started_at`. Update the
+`PRICES_*` tables when official rates change (platform.deepseek.com).
 
-## Integration (report every session automatically)
+## Accuracy
 
-Add this rule to the agent's user-level instruction file (`~/.zcode/AGENTS.md`,
-`~/.codex/AGENTS.md`, `CLAUDE.md`, or a project `AGENTS.md`):
-
-> Run `python3 <skill-dir>/scripts/usage_report.py --agent <your-agent> --latest`
-> (ALWAYS pass `--agent` — auto-detection can read another concurrently running
-> agent's data) before every final reply and append its two output lines verbatim:
-> `本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`
-> `整个会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`.
-> Skip only when the script prints "No usage data found".
+This is an **estimate**, not the provider bill. Expected deviations, typically
+~1% of tokens per turn: the provider prices each request by its own time-of-day
+(we use the window start time) and counts freshly-added context (new user
+message, tool results) as cache-miss, while local logs may report it as
+cache-hit; local logs may also miss aborted/non-interactive requests.
 
 ## Security
 
-- The script reads **only** local rollout JSON files under the user's home
-  directory. It never reads, prints, or requires API keys, `.env` files, or
-  credentials.
-- Rollout files may contain prompt text — never echo their contents. Print only
-  the aggregated numbers the script outputs.
+Reads only local files; never touches API keys or credentials; never echo log
+contents — print only the aggregated numbers.

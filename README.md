@@ -62,6 +62,11 @@ Add to your agent's `AGENTS.md` so every final reply ends with the line:
 | Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole — rollouts store **cumulative** totals; single line) |
 | Claude  | `~/.claude/projects/**/*.jsonl`                 | last **segment** (since the latest `"type":"user"` record) |
 | OpenCode| `<data>/opencode/opencode.db` (SQLite; `%LOCALAPPDATA%` on Windows, `$XDG_DATA_HOME` or `~/.local/share` otherwise) | last **segment** of the most recent session |
+| DSH     | `~/.dsh/sessions/**/session.jsonl[.zstd]` (zstd-compressed; optional `zstandard` dep) | last **turn** (one user exchange) + whole session |
+
+**Always pass `--agent`** when running from inside an agent session —
+auto-detection picks the most recently modified file, which may belong to a
+different concurrently running agent. `--session <substring>` pins a file.
 
 ## Accuracy
 

@@ -26,18 +26,22 @@ the current turn against the session total.
 
 ## How to run
 
-Script: `scripts/usage_report.py` — Python 3.9+, standard library only, no install.
+Script: `scripts/usage_report.py` — Python 3.9+, standard library only
+(no install), except the optional `zstandard` package needed for DeepSeek
+Harness (dsh) logs.
 
 ```bash
 python3 <this-skill-dir>/scripts/usage_report.py --latest   # most recent segment/session (default)
 python3 <this-skill-dir>/scripts/usage_report.py --whole    # whole latest session
 python3 <this-skill-dir>/scripts/usage_report.py --all      # per-session list
-python3 <this-skill-dir>/scripts/usage_report.py --agent zcode|codex|claude|opencode
+python3 <this-skill-dir>/scripts/usage_report.py --agent zcode|codex|claude|opencode|dsh
+python3 <this-skill-dir>/scripts/usage_report.py --session <substring>   # pin a session
 ```
 
 Always use the **absolute path** to this skill's directory. Do not `cd` elsewhere
-first. The script auto-detects the agent (the one with the newest rollout file);
-`--agent` overrides that.
+first. **Pass `--agent` explicitly when you run it from inside an agent session**
+(auto-detection picks the most recently modified file, which may belong to a
+*different* concurrently running agent); `--session` pins a specific session file.
 
 Append the script's output to the final reply **verbatim** — both lines, on
 separate lines (本段会话 above, 整个会话 below). If the reply is markdown, a
@@ -64,6 +68,7 @@ fenced code block (or leave a blank line between them):
 | Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole) — Codex rollouts store **cumulative** running totals, so only the final total is reported, as a single line; segment data is unavailable |
 | Claude  | `~/.claude/projects/**/*.jsonl`                 | last **segment**: records since the latest `"type":"user"` record |
 | OpenCode| `<data>/opencode/opencode.db` (SQLite; `%LOCALAPPDATA%` on Windows, `$XDG_DATA_HOME` or `~/.local/share` otherwise) | last **segment** of the most recent session (from the latest user message) |
+| DSH     | `~/.dsh/sessions/**/session.jsonl[.zstd]` (zstd-compressed; needs optional `zstandard`) | last **turn** (one user exchange) + whole session |
 
 All four are parsed from documented, locally-verified or well-known formats.
 DeepSeek Harness (dsh) and other agents can be added with a small parser —
@@ -110,8 +115,9 @@ the authoritative source is platform.deepseek.com.
 Add this rule to the agent's user-level instruction file (`~/.zcode/AGENTS.md`,
 `~/.codex/AGENTS.md`, `CLAUDE.md`, or a project `AGENTS.md`):
 
-> Run `python3 <skill-dir>/scripts/usage_report.py --latest` before every final
-> reply and append its two output lines verbatim:
+> Run `python3 <skill-dir>/scripts/usage_report.py --agent <your-agent> --latest`
+> (ALWAYS pass `--agent` — auto-detection can read another concurrently running
+> agent's data) before every final reply and append its two output lines verbatim:
 > `本段会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`
 > `整个会话：输入 X / 缓存命中 Y / 输出 Z / 命中率 N% / 费用 ¥M`.
 > Skip only when the script prints "No usage data found".

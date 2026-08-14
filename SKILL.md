@@ -24,6 +24,12 @@ cp -r token-usage-report /d/agents/skills/
 Then register that path with your agent (or reference it by absolute path).
 Reason: keeps the system drive clean and avoids permission issues.
 
+**Multi-agent path discipline**: agents on the same machine must share ONE
+canonical copy at a fixed path (e.g. `D:\agents\skills\token-usage-report`).
+Before installing, check whether that path already has a copy — if yes, reuse
+or overwrite it in place; never create per-agent copies in different
+directories, or the copies drift apart and reports become inconsistent.
+
 ## One-time setup: the installing agent writes its adapter
 
 The core script knows nothing about any agent. **You** (the installing agent)

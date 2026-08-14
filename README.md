@@ -29,6 +29,17 @@ cp -r token-usage-report /d/agents/skills/
 
 Register that path with your agent, or reference the skill by absolute path.
 
+## Multi-agent install discipline (same device)
+
+Multiple agents on the same machine must share **one canonical copy**:
+
+1. Use a fixed canonical path (e.g. `D:\agents\skills\token-usage-report`) —
+   never copy the skill into per-agent directories.
+2. Before installing, check whether the canonical path already has a copy: if
+   yes, reuse/overwrite it (update in place); if no, copy there.
+3. Reference the shared copy by its **absolute path**, so every agent uses the
+   same version — per-agent copies drift apart and produce inconsistent reports.
+
 ## One-time setup: write your adapter
 
 The installing agent fills in `scripts/adapters/<your-agent>.py` (start from

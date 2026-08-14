@@ -22,6 +22,17 @@ cp -r token-usage-report /d/agents/skills/
 
 然后向你的 agent 注册该路径（或直接用绝对路径引用）。
 
+## 同一设备多 agent 安装规范
+
+同一台设备的多个 agent 必须**共用同一份副本**：
+
+1. 统一安装到固定的规范路径（如 `D:\agents\skills\token-usage-report`），
+   禁止各自复制到不同目录。
+2. 安装前先检查规范路径是否已有副本：已有 → 直接复用/原地更新；没有 →
+   复制过去。
+3. 所有 agent 一律用该**绝对路径**引用同一份，避免多副本版本漂移
+   （各 agent 用到不同版本会导致汇报不一致）。
+
 ## 一次性配置：安装者自行编写适配器
 
 安装本 skill 的 agent 需要填写 `scripts/adapters/<你的-agent>.py`（从

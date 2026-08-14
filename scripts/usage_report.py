@@ -137,7 +137,13 @@ def has_user_message(agent: str, rec: dict) -> bool:
     """
     if agent == "zcode":
         msgs = (rec.get("request") or {}).get("messages") or []
-        return bool(msgs) and (msgs[-1] or {}).get("role") == "user"
+        # A new turn ends the message list with a user prompt. Trailing
+        # system messages (e.g. harness reminders) may follow the user message,
+        # so skip them and check the last non-system message.
+        i = len(msgs) - 1
+        while i >= 0 and (msgs[i] or {}).get("role") == "system":
+            i -= 1
+        return i >= 0 and (msgs[i] or {}).get("role") == "user"
     if agent == "claude":
         return rec.get("type") == "user"
     return False  # codex / opencode: segment not detectable here

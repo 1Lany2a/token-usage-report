@@ -59,7 +59,7 @@ fenced code block (or leave a blank line between them):
 
 | Agent   | Data source                                     | `--latest` means                                   |
 |---------|-------------------------------------------------|----------------------------------------------------|
-| ZCode   | `~/.zcode/cli/rollout/model-io-*.jsonl`         | last **segment**: records since the latest request containing a user message (that turn incl. its tool calls) |
+| ZCode   | `~/.zcode/cli/rollout/model-io-*.jsonl`         | last **segment**: records since the latest request whose *last* message is a user prompt (that turn incl. its tool calls) |
 | Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole file)                      |
 | Claude  | `~/.claude/projects/**/*.jsonl`                 | last **segment**: records since the latest `"type":"user"` record |
 | OpenCode| `<data>/opencode/opencode.db` (SQLite; `%LOCALAPPDATA%` on Windows, `$XDG_DATA_HOME` or `~/.local/share` otherwise) | last **segment** of the most recent session (from the latest user message) |

@@ -121,10 +121,15 @@ def pricing_for(started_at: dt.datetime | None, model: str):
 
 
 def has_user_message(agent: str, rec: dict) -> bool:
-    """True if this record marks a user prompt (segment boundary)."""
+    """True if this record marks the start of a new user turn (segment boundary).
+
+    Check the *last* message, not any message: request.messages always carries
+    the full conversation history, so "contains a user message" would match
+    every record and shrink the segment to the last record of the file.
+    """
     if agent == "zcode":
         msgs = (rec.get("request") or {}).get("messages") or []
-        return any((m or {}).get("role") == "user" for m in msgs)
+        return bool(msgs) and (msgs[-1] or {}).get("role") == "user"
     if agent == "claude":
         return rec.get("type") == "user"
     return False  # codex / opencode: segment not detectable here

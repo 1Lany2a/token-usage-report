@@ -58,7 +58,7 @@ Add to your agent's `AGENTS.md` so every final reply ends with the line:
 
 | Agent   | Data source                                     | `--latest` means                                    |
 |---------|-------------------------------------------------|-----------------------------------------------------|
-| ZCode   | `~/.zcode/cli/rollout/model-io-*.jsonl`         | last **segment** (since the latest user message, incl. its tool calls) |
+| ZCode   | `~/.zcode/cli/rollout/model-io-*.jsonl`         | last **segment** (since the latest request whose *last* message is a user prompt) |
 | Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole file)                       |
 | Claude  | `~/.claude/projects/**/*.jsonl`                 | last **segment** (since the latest `"type":"user"` record) |
 | OpenCode| `<data>/opencode/opencode.db` (SQLite; `%LOCALAPPDATA%` on Windows, `$XDG_DATA_HOME` or `~/.local/share` otherwise) | last **segment** of the most recent session |

@@ -31,14 +31,19 @@ Register that path with your agent, or reference the skill by absolute path.
 
 ## Multi-agent install discipline (same device)
 
-Multiple agents on the same machine must share **one canonical copy**:
+Each agent on the same machine installs to its **own independent path** — do
+not share one copy between agents:
 
-1. Use a fixed canonical path (e.g. `D:\agents\skills\token-usage-report`) —
-   never copy the skill into per-agent directories.
-2. Before installing, check whether the canonical path already has a copy: if
-   yes, reuse/overwrite it (update in place); if no, copy there.
-3. Reference the shared copy by its **absolute path**, so every agent uses the
-   same version — per-agent copies drift apart and produce inconsistent reports.
+1. Put the agent's name in the path, e.g.
+   `D:\agents\skills\zcode\token-usage-report`,
+   `D:\agents\skills\codex\token-usage-report`,
+   `D:\agents\skills\dsh\token-usage-report` — each agent owns its copy.
+2. Never copy into another agent's directory, and never overwrite another
+   agent's copy.
+3. Reason: the adapter (`scripts/adapters/<your-agent>.py`) is agent-private —
+   each agent writes its own. A shared directory invites one agent's update to
+   clobber another agent's adapter, and concurrent writes to the same folder
+   are a real conflict risk.
 
 ## One-time setup: write your adapter
 

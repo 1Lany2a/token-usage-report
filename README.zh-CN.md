@@ -24,14 +24,16 @@ cp -r token-usage-report /d/agents/skills/
 
 ## 同一设备多 agent 安装规范
 
-同一台设备的多个 agent 必须**共用同一份副本**：
+同一台设备的每个 agent 安装到**相互独立的路径**，不要共用同一份副本：
 
-1. 统一安装到固定的规范路径（如 `D:\agents\skills\token-usage-report`），
-   禁止各自复制到不同目录。
-2. 安装前先检查规范路径是否已有副本：已有 → 直接复用/原地更新；没有 →
-   复制过去。
-3. 所有 agent 一律用该**绝对路径**引用同一份，避免多副本版本漂移
-   （各 agent 用到不同版本会导致汇报不一致）。
+1. 路径中包含 agent 名，例如：
+   `D:\agents\skills\zcode\token-usage-report`、
+   `D:\agents\skills\codex\token-usage-report`、
+   `D:\agents\skills\dsh\token-usage-report`——各自持有独立副本。
+2. 不要复制进其他 agent 的目录，也不要覆盖其他 agent 的副本。
+3. 原因：适配器（`scripts/adapters/<你的-agent>.py`）是 agent 私有的——
+   每个 agent 写自己的。共用同一目录会被其他 agent 的更新覆盖，且并发写
+   同一目录存在真实的冲突风险。
 
 ## 一次性配置：安装者自行编写适配器
 

@@ -49,8 +49,9 @@ fenced code block (or leave a blank line between them):
     整个会话：输入 987654 / 缓存命中 876543 / 输出 43210 / 命中率 88.8% / 费用 ¥0.50
     ```
 
-- Exit code 0 → **always** include both lines, even if the numbers look
+- Exit code 0 → **always** include the lines, even if the numbers look
   identical to the previous report (the user wants them every turn).
+- Codex reports a **single** line (whole session) — there is no segment data.
 - Exit code 1 / "No usage data found" → skip silently; do not ask the user.
 - Any other error → fix the cause (missing Python, moved skill dir) before
   responding; do not silently skip.
@@ -60,13 +61,31 @@ fenced code block (or leave a blank line between them):
 | Agent   | Data source                                     | `--latest` means                                   |
 |---------|-------------------------------------------------|----------------------------------------------------|
 | ZCode   | `~/.zcode/cli/rollout/model-io-*.jsonl`         | last **segment**: records since the latest request whose *last* message is a user prompt (that turn incl. its tool calls) |
-| Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole file)                      |
+| Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole) — Codex rollouts store **cumulative** running totals, so only the final total is reported, as a single line; segment data is unavailable |
 | Claude  | `~/.claude/projects/**/*.jsonl`                 | last **segment**: records since the latest `"type":"user"` record |
 | OpenCode| `<data>/opencode/opencode.db` (SQLite; `%LOCALAPPDATA%` on Windows, `$XDG_DATA_HOME` or `~/.local/share` otherwise) | last **segment** of the most recent session (from the latest user message) |
 
 All four are parsed from documented, locally-verified or well-known formats.
 DeepSeek Harness (dsh) and other agents can be added with a small parser —
 see README.md for the recipe.
+
+## Accuracy & limitations
+
+The report is an **estimate from local rollout data + list prices**, not the
+provider bill. Differences vs the official usage page can come from:
+
+- **Codex totals are cumulative**: each `total_token_usage` record is the running
+  session total, so the script uses the last record (never sums). Per-request and
+  per-segment numbers are unavailable for Codex.
+- **Peak/off-peak is applied per session start time**, while the provider prices
+  each request by its own time. A session crossing a peak boundary
+  (09:00–12:00 / 14:00–18:00 Beijing) is mispriced for the crossed part.
+- **Reasoning output tokens** are included in `output` for Codex (billed at the
+  output rate); ZCode rollouts expose no reasoning field.
+- Local rollouts may not capture every request on the key (aborted streams,
+  non-interactive calls), so totals can be lower than the full key usage.
+- Rates are a snapshot; a gateway/aggregator key or a different model ID may
+  bill at different prices.
 
 ## Cost model
 

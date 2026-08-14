@@ -59,9 +59,26 @@ Add to your agent's `AGENTS.md` so every final reply ends with the line:
 | Agent   | Data source                                     | `--latest` means                                    |
 |---------|-------------------------------------------------|-----------------------------------------------------|
 | ZCode   | `~/.zcode/cli/rollout/model-io-*.jsonl`         | last **segment** (since the latest request whose *last* message is a user prompt) |
-| Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole file)                       |
+| Codex   | `~/.codex/sessions/**/rollout-*.jsonl`          | last **session** (whole — rollouts store **cumulative** totals; single line) |
 | Claude  | `~/.claude/projects/**/*.jsonl`                 | last **segment** (since the latest `"type":"user"` record) |
 | OpenCode| `<data>/opencode/opencode.db` (SQLite; `%LOCALAPPDATA%` on Windows, `$XDG_DATA_HOME` or `~/.local/share` otherwise) | last **segment** of the most recent session |
+
+## Accuracy
+
+The report is an estimate from local rollouts + list prices, not the provider
+bill. Known sources of difference:
+
+- **Codex records are cumulative session totals** — the script uses the last
+  record, never sums (summing would inflate tokens by ~3×); per-segment data is
+  unavailable for Codex.
+- **Peak/off-peak pricing is applied per session start time**, while the
+  provider prices per request — sessions crossing 09:00–12:00 / 14:00–18:00
+  Beijing are partially mispriced.
+- **Reasoning output tokens** are added to `output` for Codex (billed at the
+  output rate); ZCode rollouts expose no reasoning field.
+- Local rollouts may miss some requests on the key (aborted streams, non
+  -interactive calls) — totals can be lower than full key usage.
+- A gateway/aggregator key or different model ID may bill at different rates.
 
 ZCode / Codex are verified against real local data; Claude Code and OpenCode use
 their documented formats (Claude Code: `message.usage` per assistant record;

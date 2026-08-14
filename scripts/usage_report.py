@@ -155,10 +155,13 @@ def usage_of(agent: str, rec: dict) -> dict | None:
         if not isinstance(usage, dict):
             return None
         m = payload.get("model") or (payload.get("state") or {}).get("model")
+        # DeepSeek bills reasoning output tokens at the output rate; the API
+        # reports them separately from output_tokens.
+        out = int(usage.get("output_tokens") or 0) + int(usage.get("reasoning_output_tokens") or 0)
         return {
             "input": int(usage.get("input_tokens") or 0),
             "cached": int(usage.get("cached_input_tokens") or 0),
-            "output": int(usage.get("output_tokens") or 0),
+            "output": out,
             "model": str(m) if m else None,
             "started_at": parse_iso(rec.get("timestamp") or payload.get("timestamp")),
         }
@@ -239,7 +242,13 @@ def aggregate_file(path: Path, agent: str, latest_segment_only: bool) -> dict | 
             rows.append((idx, u))
     if not rows:
         return None
-    if latest_segment_only and user_idx:
+    if agent == "codex":
+        # Codex total_token_usage records are CUMULATIVE session totals (each
+        # record is the running total so far); the last record is the final
+        # session total. Summing them would overcount by several times, and
+        # per-request/segment data is not available from cumulative snapshots.
+        rows = rows[-1:]
+    elif latest_segment_only and user_idx:
         start = user_idx[-1]
         seg = [u for i, u in rows if i >= start]
         if not seg:
@@ -356,7 +365,11 @@ def main() -> int:
         return 0
 
     label, full, seg = sessions[-1]
-    if args.whole:
+    if agent == "codex":
+        # Codex stores only cumulative session totals, so there is no segment:
+        # report the whole session on a single line.
+        print(f"整个会话：{fmt(full)}")
+    elif args.whole:
         print(f"整个会话：{fmt(full, show_meta=True)}")
     else:
         print(f"本段会话：{fmt(seg)}")
